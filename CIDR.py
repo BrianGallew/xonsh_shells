@@ -34,7 +34,7 @@ class CIDR(object):
                 self.mask <<= 1
                 if i < self.bitlength:
                     self.mask += 1
-        except:                 # Hrm, maybe we got a netmask instead of a bitlength
+        except ValueError:  # Hrm, maybe we got a netmask instead of a bitlength
             parts = self.bitlength.split('.')
             self.mask = (int(parts[0]) << 24) | (int(parts[1]) << 16) | (
                 int(parts[2]) << 8) | int(parts[3])

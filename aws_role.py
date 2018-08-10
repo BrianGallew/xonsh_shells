@@ -1,5 +1,4 @@
-
-import os
+'''Secure and use AWS role-based session credentials'''
 from getpass import getpass
 import time
 import builtins
@@ -9,6 +8,10 @@ from botocore.exceptions import ParamValidationError
 from natural.date import compress
 import xonsh
 from shared_cache import shared_cache
+
+#########
+# AWS fanciness
+from xontrib.powerline import register_sec, Section, pl_build_prompt
 
 _env = builtins.__xonsh_env__
 _EXPIRATION = 'Expiration'
@@ -119,11 +122,6 @@ def list_roles(role_list):
         print()
 
 
-#########
-# AWS fanciness
-from xontrib.powerline import register_sec, Section, pl_build_prompt
-
-
 @register_sec
 def aws():
     try:
@@ -131,9 +129,11 @@ def aws():
             remaining = _env['AWS_SESSIONS'][_env['AWS_PROFILE']
                                              ][_EXPIRATION] - int(time.time())
             if remaining > 300:
-                return Section('AWS: %s(%s) ' % (_env['AWS_PROFILE'], compress(remaining)), 'GREEN', '#333')
+                return Section('AWS: %s(%s) ' % (_env['AWS_PROFILE'], compress(remaining)),
+                               'GREEN', '#333')
             else:
-                return Section('AWS: %s(%s) ' % (_env['AWS_PROFILE'], compress(remaining)), 'GREEN', 'RED')
+                return Section('AWS: %s(%s) ' % (_env['AWS_PROFILE'], compress(remaining)),
+                               'GREEN', 'RED')
         return Section('AWS: %s ' % _env['AWS_PROFILE'], 'GREEN', '#333')
     except Exception as e:
         return Section('', 'WHITE', '#333')
@@ -151,7 +151,7 @@ def _aws_role(args):
         return
     _env['AWS_PROFILE'] = args[0]
     _env['AWS_ROLE'] = args[1]
-    if (not 'AWS_SESSIONS' in _env) or (_env['AWS_SESSIONS'] is None):
+    if ('AWS_SESSIONS' not in _env) or (_env['AWS_SESSIONS'] is None):
         _env['AWS_SESSIONS'] = dict()
     if args[0] in _env['AWS_SESSIONS']:
         token = _env['AWS_SESSIONS'][_env['AWS_PROFILE']]
@@ -173,25 +173,22 @@ def _aws_role(args):
 
 
 shared_cache.share_value(['AWS_SESSIONS'])
-aliases['aws_role'] = _aws_role
+aliases['aws_role'] = _aws_role  # noqa: F821
 
 
 @xonsh.tools.uncapturable
 def _knife_command(args, stdin=None, stdout=None, stderr=None):
     '''Make "knife" an alias that automatically uses the correct
     configuration based on your AWS profile.'''
-    if _env.get('AWS_PROFILE', None) is None:
-        print('Try setting your AWS environment first')
-        return
     arg_list = list(args)
     try:
         arg_list.insert(1,
                         f'{_env["HOME"]}/.chef/knife-{_env["AWS_PROFILE"]}.rb')
         arg_list.insert(1, '-c')
-    except:
+    except KeyError:
         print("running knife with whatever 'knife block' is configured for")
     arg_list.insert(0, '/usr/local/bin/knife')
     run(arg_list, stdin=stdin, stdout=stdout, stderr=stderr)
 
 
-aliases['knife'] = _knife_command
+aliases['knife'] = _knife_command  # noqa: F821

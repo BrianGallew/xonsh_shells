@@ -73,10 +73,10 @@ class SharedCache():
 shared_cache = SharedCache()
 
 
-@events.on_pre_prompt
+@events.on_pre_prompt           # noqa: F821
 def shared_cache_update():
     'Func to be decorated for prompt updates'
     shared_cache()
 
 
-aliases['share'] = shared_cache.share_value
+aliases['share'] = shared_cache.share_value  # noqa: F821
