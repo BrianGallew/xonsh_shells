@@ -1,16 +1,16 @@
 # -*- mode: python -*-
 '''network address display/conversion
 
-If you use xonsh, put this in your path and extend your .xonshrc thusly:
+xontrib load CIDR
 
-from CIDR import CIDR
-def _cidr(args):
-    arg = args[0]
-    if isinstance(arg, int) or arg.isnumeric():
-        c = CIDR('0.0.0.0/0')
-        return c.convert(int(arg))
-    return CIDR(arg)
-aliases['cidr'] = _cidr
+cidr 10.100.4.0/22
+         CIDR range: 10.100.4.0/22
+                    Netmask: 255.255.252.0
+            Network address: 10.100.4.0
+          Broadcast address: 10.100.7.255
+         First host address: 10.100.4.1
+          Last host address: 10.100.7.254
+        Available addresses: 1022
 
 Credit where credit is due:
 This started from a conversation with Adam Moskewicz, but any coding mistakes are mine.
@@ -71,3 +71,12 @@ class CIDR(object):
                     self.convert(self.ip & self.mask),
                     self.convert(self.ip | ~self.mask), self.first, self.last,
                     (~self.mask & self.thirtytwo) - 1)
+
+
+def _cidr(args):
+    arg = args[0]
+    if isinstance(arg, int) or arg.isnumeric():
+        c = CIDR('0.0.0.0/0')
+        return c.convert(int(arg))
+    return CIDR(arg)
+aliases['cidr'] = _cidr
