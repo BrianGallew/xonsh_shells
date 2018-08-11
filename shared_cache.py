@@ -66,6 +66,7 @@ class SharedCache():
 
         for key in self.shared:
             if self.shared.get(key) != _env.get(key):
+                self._save_shared_values()
                 return
         return
 
