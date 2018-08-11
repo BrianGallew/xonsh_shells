@@ -6,15 +6,15 @@ Various xonsh modules/scripts to make life more interesting.
 Simple little tool for deriving network address information from CIDR
 ranges.
 
-```python
-from CIDR import CIDR
-def _cidr(args):
-    arg = args[0]
-    if isinstance(arg, int) or arg.isnumeric():
-        c = CIDR('0.0.0.0/0')
-        return c.convert(int(arg))
-    return CIDR(arg)
-aliases['cidr'] = _cidr
+```xonsh
+cidr 10.100.4.0/22
+         CIDR range: 10.100.4.0/22
+                    Netmask: 255.255.252.0
+            Network address: 10.100.4.0
+          Broadcast address: 10.100.7.255
+         First host address: 10.100.4.1
+          Last host address: 10.100.7.254
+        Available addresses: 1022
 ```
 
 ## shared_cache
@@ -23,6 +23,7 @@ Provides an alias that can be used to share environment variables between
 xonsh instances.
 
 ```python
+xontrib load shared_cache
 # put something like this in your .xonshrc
 share PATH
 
@@ -40,7 +41,15 @@ will use the knife-$PROFILE.rb file (much as if you'd done a `knife block
 $PROFILE`.
 
 ```python
-import aws_role
-aws_role default arn:aws:iam::xxxxxxxxxx:role/Shiny-Admin-Role
+contrib load aws_role
+def _role1():
+    aws_role default arn:aws:iam::xxxxxxxxxx:role/Read-Only-Role
+def _role2():
+    aws_role default arn:aws:iam::xxxxxxxxxx:role/Basic-User-Role
+def _role3():
+    aws_role default arn:aws:iam::xxxxxxxxxx:role/Shiny-Admin-Role
+aliases['safe'] = _role1
+aliases['read_write'] = _role2
+aliases['FEEL_THE_POWER'] = _role3
 ```
 If you provide an invalid role, it'll list the available roles for you.
