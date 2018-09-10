@@ -21,6 +21,44 @@ _SESSIONTOKEN = 'SessionToken'
 _DURATION = 43200
 
 
+def _get_session_token():
+    '''Get role-based access credentials'''
+    boto3.setup_default_session(profile_name=_env['AWS_PROFILE'])
+    sts_identity = boto3.client('sts').get_caller_identity()
+    aws_username = sts_identity['Arn'].split("/")[-1]
+    mfa_device = boto3.client('iam').list_mfa_devices(
+        UserName=aws_username)['MFADevices']
+    session_token = dict()
+    try:
+        if mfa_device:
+            mfa_code = getpass("MFA Code: ")
+            print()
+            session_token = boto3.client('sts').get_session_token(
+                DurationSeconds=_DURATION,
+                SerialNumber=mfa_device[0]['SerialNumber'],
+                TokenCode=mfa_code)['Credentials']
+        else:
+            session_token = boto3.client('sts').get_session_token(
+                DurationSeconds=_DURATION)['Credentials']
+    except ParamValidationError as e:
+        print('LOSER!', e)
+        return False
+
+    return session_token
+
+
+def _get_and_show_session_token():
+    session_token = _get_session_token()
+    if session_token:
+        print(f'''
+[default]
+aws_access_key_id = {session_token["AccessKeyId"]}
+aws_secret_access_key = {session_token["SecretAccessKey"]}
+aws_session_token = {session_token["SessionToken"]}
+region = {boto3._get_default_session().region_name}
+''')
+
+
 def get_aws_credentials(user_name, role):
     '''Get role-based access credentials'''
     boto3.setup_default_session(profile_name=_env['AWS_PROFILE'])
@@ -174,6 +212,7 @@ def _aws_role(args):
 
 shared_cache.share_value(['AWS_SESSIONS'])
 aliases['aws_role'] = _aws_role  # noqa: F821
+aliases['new_session'] = _get_and_show_session_token  # noqa: F821
 
 
 @xonsh.tools.uncapturable
