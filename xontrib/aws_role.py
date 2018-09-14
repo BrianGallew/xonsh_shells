@@ -7,7 +7,7 @@ import boto3
 from botocore.exceptions import ParamValidationError
 from natural.date import compress
 import xonsh
-from shared_cache import shared_cache
+from xontrib.shared_cache import shared_cache
 
 #########
 # AWS fanciness
