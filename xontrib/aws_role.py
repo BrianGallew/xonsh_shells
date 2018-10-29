@@ -188,7 +188,6 @@ def _aws_role(args):
         print("You called it with", args)
         return
     _env['AWS_PROFILE'] = args[0]
-    _env['AWS_ROLE'] = args[1]
     if ('AWS_SESSIONS' not in _env) or (_env['AWS_SESSIONS'] is None):
         _env['AWS_SESSIONS'] = dict()
     if args[0] in _env['AWS_SESSIONS']:
@@ -200,7 +199,7 @@ def _aws_role(args):
         for key in ['AWS_SESSION_TOKEN', 'AWS_SECRET_ACCESS_KEY', 'AWS_ACCESS_KEY_ID']:
             if key in builtins.__xonsh_env__:
                 del builtins.__xonsh_env__[key]
-        token = get_aws_credentials(_env['USER'], _env['AWS_ROLE'])
+        token = get_aws_credentials(_env['USER'], args[1])
         if not token:
             return
         _env['AWS_SESSIONS'][_env['AWS_PROFILE']] = token
