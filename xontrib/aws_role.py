@@ -189,7 +189,6 @@ def aws():
 
 _env['PL_RPROMPT'] = 'aws>history>time'
 pl_build_prompt()
-_env['XONSH_SHOW_TRACEBACK'] = True
 
 
 def _aws_role(args):
