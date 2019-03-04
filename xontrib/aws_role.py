@@ -13,7 +13,8 @@ from xontrib.shared_cache import shared_cache
 # AWS fanciness
 from xontrib.powerline import register_sec, Section, pl_build_prompt
 
-_env = builtins.__xonsh_env__
+_env = builtins.__xonsh__.env   # This is the live environment
+
 _EXPIRATION = 'Expiration'
 _ACCESSKEYID = 'AccessKeyId'
 _SECRETACCESSKEY = 'SecretAccessKey'
@@ -21,7 +22,7 @@ _SESSIONTOKEN = 'SessionToken'
 _DURATION = 43200
 
 
-def _get_session_token():
+def _get_session_token(duration=_DURATION):
     '''Get role-based access credentials'''
     boto3.setup_default_session(profile_name=_env['AWS_PROFILE'])
     sts_identity = boto3.client('sts').get_caller_identity()
@@ -34,12 +35,12 @@ def _get_session_token():
             mfa_code = getpass("MFA Code: ")
             print()
             session_token = boto3.client('sts').get_session_token(
-                DurationSeconds=_DURATION,
+                DurationSeconds=duration,
                 SerialNumber=mfa_device[0]['SerialNumber'],
                 TokenCode=mfa_code)['Credentials']
         else:
             session_token = boto3.client('sts').get_session_token(
-                DurationSeconds=_DURATION)['Credentials']
+                DurationSeconds=duration)['Credentials']
     except ParamValidationError as e:
         print('LOSER!', e)
         return False
@@ -47,8 +48,11 @@ def _get_session_token():
     return session_token
 
 
-def _get_and_show_session_token():
-    session_token = _get_session_token()
+def _get_and_show_session_token(*args):
+    try:
+        session_token = _get_session_token(int(args[0]))
+    except:
+        session_token = _get_session_token()
     if session_token:
         print(f'''
 [default]
@@ -59,7 +63,7 @@ region = {boto3._get_default_session().region_name}
 ''')
 
 
-def get_aws_credentials(user_name, role):
+def get_aws_credentials(user_name, role, duration=_DURATION):
     '''Get role-based access credentials'''
     boto3.setup_default_session(profile_name=_env['AWS_PROFILE'])
     sts_identity = boto3.client('sts').get_caller_identity()
@@ -72,21 +76,21 @@ def get_aws_credentials(user_name, role):
             mfa_code = getpass("MFA Code: ")
             print()
             role_aws_token = boto3.client('sts').assume_role(
-                DurationSeconds=_DURATION,
+                DurationSeconds=duration,
                 RoleArn=role,
                 RoleSessionName=user_name,
                 SerialNumber=mfa_device[0]['SerialNumber'],
                 TokenCode=mfa_code)['Credentials']
         else:
             role_aws_token = boto3.client('sts').assume_role(
-                DurationSeconds=_DURATION,
+                DurationSeconds=duration,
                 RoleArn=role,
                 RoleSessionName=user_name)['Credentials']
     except ParamValidationError:
         expand_roles()
         return False
 
-    role_aws_token['Expiration'] = time.time() + _DURATION
+    role_aws_token['Expiration'] = time.time() + duration
     return role_aws_token
 
 
@@ -162,23 +166,30 @@ def list_roles(role_list):
 
 @register_sec
 def aws():
-    try:
-        if _env['AWS_PROFILE'] in _env['AWS_SESSIONS']:
+    section = Section('no AWS environment', 'WHITE', '#333')
+    if 'AWS_PROFILE' not in _env:
+        return section
+
+    section = Section('AWS: %s ' % _env['AWS_PROFILE'], 'GREEN', '#333')
+
+    if _env.get('AWS_SESSIONS') and _env['AWS_PROFILE'] in _env['AWS_SESSIONS']:
+        try:
             remaining = _env['AWS_SESSIONS'][_env['AWS_PROFILE']
                                              ][_EXPIRATION] - int(time.time())
             if remaining > 300:
-                return Section('AWS: %s(%s) ' % (_env['AWS_PROFILE'], compress(remaining)),
-                               'GREEN', '#333')
+                section = Section('AWS: %s(%s) ' % (_env['AWS_PROFILE'], compress(remaining)),
+                                  'GREEN', '#333')
             else:
-                return Section('AWS: %s(%s) ' % (_env['AWS_PROFILE'], compress(remaining)),
-                               'GREEN', 'RED')
-        return Section('AWS: %s ' % _env['AWS_PROFILE'], 'GREEN', '#333')
-    except Exception as e:
-        return Section('', 'WHITE', '#333')
+                section = Section('AWS: %s(%s) ' % (_env['AWS_PROFILE'], compress(remaining)),
+                                  'GREEN', 'RED')
+        except:
+            pass
+    return section
 
 
 _env['PL_RPROMPT'] = 'aws>history>time'
 pl_build_prompt()
+_env['XONSH_SHOW_TRACEBACK'] = True
 
 
 def _aws_role(args):
@@ -197,8 +208,8 @@ def _aws_role(args):
         token[_EXPIRATION] = 0
     if token[_EXPIRATION] - int(time.time()) < 300:
         for key in ['AWS_SESSION_TOKEN', 'AWS_SECRET_ACCESS_KEY', 'AWS_ACCESS_KEY_ID']:
-            if key in builtins.__xonsh_env__:
-                del builtins.__xonsh_env__[key]
+            if key in builtins.__xonsh__.env:
+                del builtins.__xonsh__.env[key]
         token = get_aws_credentials(_env['USER'], args[1])
         if not token:
             return

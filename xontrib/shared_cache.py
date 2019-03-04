@@ -5,7 +5,7 @@ import time
 import builtins
 import simpleflock
 
-_env = builtins.__xonsh_env__
+_env = builtins.__xonsh__.env
 
 
 class SharedCache():
