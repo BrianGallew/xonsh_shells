@@ -1,4 +1,4 @@
 boto3
 natural
 simpleflock
-xontrib-powerline
+xontrib-powerline2

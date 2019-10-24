@@ -11,7 +11,10 @@ from xontrib.shared_cache import shared_cache
 
 #########
 # AWS fanciness
-from xontrib.powerline import register_sec, Section, pl_build_prompt
+try:
+    from xontrib.powerline2 import register_sec, Section, pl_build_prompt
+except:
+    from xontrib.powerline import register_sec, Section, pl_build_prompt
 
 _env = builtins.__xonsh__.env   # This is the live environment
 

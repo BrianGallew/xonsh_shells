@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='xontrib-xonsh_shells',
-    version='0.1.0',
+    version='0.1.1',
     url='https://github.com/BrianGallew/xonsh_shells',
     license='MIT',
     author='Brian Gallew',
