@@ -168,7 +168,10 @@ def list_roles(role_list):
 
 
 @register_sec
-def aws():
+def aws(sample=False):
+    if sample:
+        return Section('no AWS environment', 'WHITE', '#333')
+
     section = Section('no AWS environment', 'WHITE', '#333')
     if 'AWS_PROFILE' not in _env:
         return section
