@@ -1,60 +1,68 @@
+"""A shared cache for environment variables.  In theory, new values are
+updated whenver changes are detected in the cache file.
 
+"""
+import builtins  # This is the *xonsh* builtins!
 import os
-import json
+import pickle
 import time
-import builtins
+from typing import Sequence
+
 import simpleflock
 
 _env = builtins.__xonsh__.env
 
+__all__ = ()  # Nothing here is really shared for export.
 
-class SharedCache():
-    '''Stick environment variables in a shared file'''
+
+class SharedCache:
+    """Stick environment variables in a shared file"""
 
     def __init__(self, filename=f'{_env["TMPDIR"]}/cachefile'):
         self.cache_file = filename
-        self.lock_file = f'{filename}.lock'
+        self.lock_file = f"{filename}.lock"
         self.timestamp = 0
         self.shared = dict()
         self._load_shared_values()
 
-    def share_value(self, names):
-        'Identify an environment variable to share'
-        for name in names:
-            if name not in self.shared:
-                self.shared[name] = _env.get(name, None)
-        self._save_shared_values()
+    def share_value(self, names: Sequence[str]):
+        """Identify an environment variable to share
 
-    def _save_shared_values(self):
-        'Write shared variables out to the cache file'
+        :param names: an iterable of names to add to the shared_vlue list
+        """
+        for name in names:
+            self.shared[name] = _env.get(name, None)
+        self.save_shared_values()
+
+    def save_shared_values(self):
+        "Write shared variables out to the cache file"
         for key in self.shared:
             self.shared[key] = _env.get(key, None)
 
         with simpleflock.SimpleFlock(self.lock_file):
-            with open(self.cache_file, 'w') as filehandle:
-                json.dump(self.shared, filehandle)
-                filehandle.flush()
+            with open(self.cache_file, "wb") as filehandle:
+                pickle.dump(self.shared, filehandle)
         self.timestamp = time.time()
 
     def _load_shared_values(self):
-        'Load shared variables from the cache file'
+        "Load shared variables from the cache file"
         with simpleflock.SimpleFlock(self.lock_file):
             try:
-                for key, value in json.load(open(self.cache_file)).items():
-                    self.shared[key] = value
-                    if value is None and key in _env:
-                        del _env[key]
-                    else:
-                        _env[key] = value
+                self.shared = pickle.load(open(self.cache_file, "rb"))
             except IOError:
                 return
             except Exception as the_exception:
                 print("Failed to reload shared values.", the_exception)
                 return
+        for key, value in self.shared.items():
+            if value is None and key in _env:
+                del _env[key]
+            else:
+                _env[key] = value
         self.timestamp = time.time()
 
     def __call__(self):
-        'Check if saving or loading need to happen'
+        "Check if saving or loading need to happen"
         try:
             if os.stat(self.cache_file).st_mtime > self.timestamp:
                 self._load_shared_values()
@@ -64,20 +72,22 @@ class SharedCache():
         except Exception as e:
             print(e)
 
-        for key in self.shared:
-            if self.shared.get(key) != _env.get(key):
-                self._save_shared_values()
-                return
-        return
-
 
 shared_cache = SharedCache()
 
 
-@events.on_pre_prompt           # noqa: F821
-def shared_cache_update():
-    'Func to be decorated for prompt updates'
+@events.on_envvar_change  # noqa: F821 # pylint: disable=undefined-variable
+def shared_cache_save(**_):
+    "Func to be decorated for environment changes"
+    shared_cache.save_shared_values()
+
+
+@events.on_precommand  # noqa: F821 # pylint: disable=undefined-variable
+def shared_cache_load(**_):
+    "Func to be decorated for to keep the environment up to date"
     shared_cache()
 
 
-aliases['share'] = shared_cache.share_value  # noqa: F821
+aliases[  # noqa: F821 # pylint: disable=undefined-variable
+    "share"
+] = shared_cache.share_value
